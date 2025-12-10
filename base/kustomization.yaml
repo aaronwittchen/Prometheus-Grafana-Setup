@@ -63,7 +63,7 @@ resources:
 
 # KSOPS Generator for SOPS-encrypted secrets
 generators:
-  - grafana/secret-generator.yaml
+  - secret-generator.yaml
 
 # Generate ConfigMap and Secret hashes
 configMapGenerator: []
