@@ -3,6 +3,9 @@ kind: Kustomization
 
 namespace: monitoring
 
+# Disable problematic metadata tracking to avoid kustomize panics
+buildMetadata: [originAnnotations]
+
 resources:
   - ../../base
 
