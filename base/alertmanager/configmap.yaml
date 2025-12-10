@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+  labels:
+    app: alertmanager
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
+    # Templates for Discord messages
+    templates:
+      - '/etc/alertmanager/template/*.tmpl'
+
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+        # Critical alerts go to Discord immediately
+        - match:
+            severity: critical
+          receiver: 'discord-critical'
+          continue: true
+        # Warning alerts go to Discord with grouping
+        - match:
+            severity: warning
+          receiver: 'discord-warnings'
+
+    receivers:
+      - name: 'default'
+        # Default receiver (alerts visible in Alertmanager UI)
+
+      - name: 'discord-critical'
+        # Discord webhook for critical alerts
+        # To set up: Create a webhook in Discord Server Settings → Integrations → Webhooks
+        # Then replace DISCORD_WEBHOOK_URL with your webhook URL
+        webhook_configs:
+          - url: 'DISCORD_WEBHOOK_URL/slack'  # Discord webhooks are Slack-compatible
+            send_resolved: true
+            http_config:
+              follow_redirects: true
+
+      - name: 'discord-warnings'
+        webhook_configs:
+          - url: 'DISCORD_WEBHOOK_URL/slack'
+            send_resolved: true
+            http_config:
+              follow_redirects: true
+
+    inhibit_rules:
+      # Inhibit warning if critical is firing
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'instance']
+
+  discord.tmpl: |
+    {{ define "discord.title" -}}
+    [{{ .Status | toUpper -}}
+    {{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{- end -}}
+    ] {{ .CommonLabels.alertname }}
+    {{- end }}
+
+    {{ define "discord.text" -}}
+    {{ range .Alerts }}
+    **Alert:** {{ .Labels.alertname }}
+    **Severity:** {{ .Labels.severity }}
+    **Summary:** {{ .Annotations.summary }}
+    **Description:** {{ .Annotations.description }}
+    **Details:**
+      {{ range .Labels.SortedPairs }}• {{ .Name }}: `{{ .Value }}`
+      {{ end }}
+    {{ end }}
+    {{- end }}

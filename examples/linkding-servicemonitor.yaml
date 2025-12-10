@@ -1,0 +1,71 @@
+# Example: ServiceMonitor for Linkding application
+# This shows how to configure Prometheus to scrape Linkding metrics
+#
+# Prerequisites:
+# 1. Linkding must expose a /metrics endpoint (configure this in your Linkding deployment)
+# 2. Apply this file: kubectl apply -f linkding-servicemonitor.yaml
+#
+# OR use pod annotations instead (simpler):
+# Add these annotations to your Linkding pod spec:
+#   annotations:
+#     prometheus.io/scrape: "true"
+#     prometheus.io/port: "8000"  # Change to your metrics port
+#     prometheus.io/path: "/metrics"  # Optional, defaults to /metrics
+
+---
+# Option 1: Using pod annotations (Recommended for homelab)
+# Add this to your Linkding deployment:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkding
+  namespace: linkding
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"  # Change to actual metrics port
+        prometheus.io/path: "/metrics"
+
+---
+# Option 2: Using a dedicated Service for metrics
+# If Linkding exposes metrics on a different port
+apiVersion: v1
+kind: Service
+metadata:
+  name: linkding-metrics
+  namespace: linkding
+  labels:
+    app: linkding
+    component: metrics
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+spec:
+  selector:
+    app: linkding
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+
+---
+# Option 3: Manual scrape config
+# Add this to prometheus/configmap.yaml under scrape_configs:
+#
+# - job_name: linkding
+#   kubernetes_sd_configs:
+#     - role: pod
+#       namespaces:
+#         names: [linkding]
+#   relabel_configs:
+#     - source_labels: [__meta_kubernetes_pod_label_app]
+#       action: keep
+#       regex: linkding
+#     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+#       action: replace
+#       target_label: __address__
+#       regex: (.+)
+#       replacement: $1

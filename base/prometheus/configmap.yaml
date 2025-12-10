@@ -1,0 +1,249 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 30s
+      evaluation_interval: 30s
+
+    # Alertmanager configuration
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ['alertmanager.monitoring.svc.cluster.local:9093']
+
+    # Load alert rules
+    rule_files:
+      - /etc/prometheus/alerts.yml
+
+    scrape_configs:
+      # Kubernetes API Server
+      - job_name: kubernetes-apiservers
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: default;kubernetes;https
+
+      # Kubernetes Nodes (kubelet metrics)
+      - job_name: kubernetes-nodes
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+
+      # Kubernetes cAdvisor (container metrics)
+      - job_name: kubernetes-cadvisor
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __metrics_path__
+            replacement: /metrics/cadvisor
+
+      # Node Exporter (host metrics)
+      - job_name: node-exporter
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: node-exporter
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: instance
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+
+      # Kube-state-metrics (Kubernetes object metrics)
+      - job_name: kube-state-metrics
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: kube-state-metrics
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+
+      # Auto-discover pods with prometheus annotations
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+      # Linkding (example application monitoring)
+      - job_name: linkding
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [linkding]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: linkding
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: (.+)
+            replacement: $1
+
+      # Longhorn storage metrics
+      - job_name: longhorn
+        static_configs:
+          - targets: ['longhorn-backend.longhorn-system:9500']
+
+      # CoreDNS metrics
+      - job_name: coredns
+        static_configs:
+          - targets: ['kube-dns.kube-system:9153']
+
+      # Loki metrics (self-monitoring)
+      - job_name: loki
+        static_configs:
+          - targets: ['loki.monitoring.svc.cluster.local:3100']
+
+  alerts.yml: |
+    groups:
+      - name: kubernetes.rules
+        interval: 30s
+        rules:
+          - alert: HighCPUUsage
+            expr: (100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+            for: 5m
+            labels:
+              severity: warning
+              component: node
+            annotations:
+              summary: "High CPU usage detected on {{ $labels.instance }}"
+              description: "CPU usage is {{ $value | humanize }}% on {{ $labels.instance }}"
+
+          - alert: HighMemoryUsage
+            expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+            for: 5m
+            labels:
+              severity: warning
+              component: node
+            annotations:
+              summary: "High memory usage detected on {{ $labels.instance }}"
+              description: "Memory usage is {{ $value | humanize }}% on {{ $labels.instance }}"
+
+          - alert: DiskSpaceLow
+            expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs"} / node_filesystem_size_bytes) * 100 < 15
+            for: 5m
+            labels:
+              severity: warning
+              component: storage
+            annotations:
+              summary: "Low disk space on {{ $labels.instance }}"
+              description: "Disk {{ $labels.device }} on {{ $labels.instance }} has only {{ $value | humanize }}% available"
+
+          - alert: PodRestartingTooOften
+            expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+            for: 5m
+            labels:
+              severity: warning
+              component: kubernetes
+            annotations:
+              summary: "Pod {{ $labels.pod }} restarting frequently"
+              description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting frequently"
+
+          - alert: NodeNotReady
+            expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              component: kubernetes
+            annotations:
+              summary: "Node {{ $labels.node }} is not ready"
+              description: "Node {{ $labels.node }} has been unready for more than 2 minutes"
+
+          - alert: PodCrashLooping
+            expr: rate(kube_pod_container_status_restarts_total[10m]) > 0
+            for: 10m
+            labels:
+              severity: critical
+              component: kubernetes
+            annotations:
+              summary: "Pod {{ $labels.pod }} is crash looping"
+              description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is crash looping"
+
+          - alert: PersistentVolumeSpaceLow
+            expr: (kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes) * 100 < 10
+            for: 5m
+            labels:
+              severity: warning
+              component: storage
+            annotations:
+              summary: "PV {{ $labels.persistentvolumeclaim }} is running out of space"
+              description: "PV {{ $labels.persistentvolumeclaim }} in namespace {{ $labels.namespace }} has only {{ $value | humanize }}% free space"
+
+          - alert: HighPodMemoryUsage
+            expr: sum(container_memory_working_set_bytes{container!=""}) by (pod, namespace) / sum(container_spec_memory_limit_bytes{container!=""}) by (pod, namespace) * 100 > 90
+            for: 5m
+            labels:
+              severity: warning
+              component: kubernetes
+            annotations:
+              summary: "Pod {{ $labels.pod }} using high memory"
+              description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is using {{ $value | humanize }}% of memory limit"
+
+          - alert: LonghornVolumeActualSpaceUsedWarning
+            expr: (longhorn_volume_actual_size_bytes / longhorn_volume_capacity_bytes) * 100 > 90
+            for: 5m
+            labels:
+              severity: warning
+              component: storage
+            annotations:
+              summary: "Longhorn volume {{ $labels.volume }} is almost full"
+              description: "Longhorn volume {{ $labels.volume }} is using {{ $value | humanize }}% of capacity"
+
+          - alert: PrometheusTargetDown
+            expr: up == 0
+            for: 5m
+            labels:
+              severity: critical
+              component: monitoring
+            annotations:
+              summary: "Prometheus target {{ $labels.job }}/{{ $labels.instance }} is down"
+              description: "Prometheus target {{ $labels.job }}/{{ $labels.instance }} has been down for more than 5 minutes"

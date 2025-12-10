@@ -1,0 +1,55 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - ../../base
+
+# Patch PVCs to use local-path storage class
+patches:
+  - target:
+      kind: PersistentVolumeClaim
+      name: prometheus-storage
+    patch: |-
+      - op: add
+        path: /spec/storageClassName
+        value: local-path
+
+  - target:
+      kind: PersistentVolumeClaim
+      name: grafana-storage
+    patch: |-
+      - op: add
+        path: /spec/storageClassName
+        value: local-path
+
+  - target:
+      kind: PersistentVolumeClaim
+      name: loki-storage
+    patch: |-
+      - op: add
+        path: /spec/storageClassName
+        value: local-path
+
+# Optionally adjust resource requests for smaller homelab
+# Uncomment to use lower resource limits
+# patchesStrategicMerge:
+#   - |-
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     metadata:
+#       name: prometheus
+#       namespace: monitoring
+#     spec:
+#       template:
+#         spec:
+#           containers:
+#             - name: prometheus
+#               resources:
+#                 requests:
+#                   cpu: 100m
+#                   memory: 256Mi
+#                 limits:
+#                   cpu: 500m
+#                   memory: 1Gi

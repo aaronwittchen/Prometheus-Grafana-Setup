@@ -1,0 +1,63 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - namespace.yaml
+
+  # Prometheus
+  - prometheus/rbac.yaml
+  - prometheus/configmap.yaml
+  - prometheus/pvc.yaml
+  - prometheus/deployment.yaml
+  - prometheus/service.yaml
+
+  # Node Exporter
+  - node-exporter/daemonset.yaml
+  - node-exporter/service.yaml
+
+  # Kube State Metrics
+  - kube-state-metrics/rbac.yaml
+  - kube-state-metrics/deployment.yaml
+  - kube-state-metrics/service.yaml
+
+  # Grafana
+  - grafana/secret.yaml
+  - grafana/configmap.yaml
+  - grafana/pvc.yaml
+  - grafana/deployment.yaml
+  - grafana/service.yaml
+
+  # Alertmanager
+  - alertmanager/configmap.yaml
+  - alertmanager/deployment.yaml
+  - alertmanager/service.yaml
+
+  # Loki
+  - loki/configmap.yaml
+  - loki/pvc.yaml
+  - loki/deployment.yaml
+  - loki/service.yaml
+
+  # Promtail
+  - promtail/rbac.yaml
+  - promtail/configmap.yaml
+  - promtail/daemonset.yaml
+
+  # Ingress
+  - ingress/ingress.yaml
+
+  # Network Policies (optional - comment out if not needed)
+  - network-policies/policies.yaml
+
+commonLabels:
+  managed-by: kustomize
+  stack: monitoring
+
+# Generate ConfigMap and Secret hashes
+configMapGenerator: []
+secretGenerator: []
+
+# Images can be overridden here if needed
+images: []

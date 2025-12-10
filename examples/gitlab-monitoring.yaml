@@ -1,0 +1,51 @@
+# Example: Monitoring GitLab with Prometheus
+# GitLab comes with built-in Prometheus exporter support
+#
+# 1. Enable GitLab Prometheus exporter in your GitLab deployment:
+#    Configure gitlab.yml or Helm values to enable monitoring
+
+---
+# GitLab metrics service (if using GitLab Helm chart)
+# The Helm chart usually creates these automatically, but here's an example:
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-metrics
+  namespace: gitlab
+  labels:
+    app: gitlab
+    component: metrics
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  selector:
+    app: gitlab
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+
+---
+# Add this scrape config to prometheus/configmap.yaml:
+#
+# - job_name: gitlab
+#   kubernetes_sd_configs:
+#     - role: pod
+#       namespaces:
+#         names: [gitlab]
+#   relabel_configs:
+#     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+#       action: keep
+#       regex: "true"
+#     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+#       action: replace
+#       target_label: __address__
+#       regex: ([^:]+)(?::\d+)?;(\d+)
+#       replacement: $1:$2
+#
+# GitLab Dashboards for Grafana:
+# - Import dashboard ID 13946 (GitLab Omnibus)
+# - Import dashboard ID 14834 (GitLab Runner)

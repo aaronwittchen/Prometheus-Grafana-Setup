@@ -1,0 +1,96 @@
+# Example: ArgoCD Application for deploying this monitoring stack
+#
+# This shows how to deploy the monitoring stack using ArgoCD
+# Prerequisites:
+# 1. ArgoCD installed in your cluster
+# 2. This Git repository accessible to ArgoCD
+# 3. Decide whether to use local-path or longhorn overlay
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # Source: Your Git repository
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/YOUR_REPO.git
+    targetRevision: main
+    path: overlays/local-path  # Or overlays/longhorn
+
+  # Destination: monitoring namespace
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+---
+# Alternative: AppProject with monitoring-specific settings
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: monitoring
+  namespace: argocd
+spec:
+  description: Monitoring and observability stack
+
+  sourceRepos:
+    - '*'
+
+  destinations:
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: 'rbac.authorization.k8s.io'
+      kind: ClusterRole
+    - group: 'rbac.authorization.k8s.io'
+      kind: ClusterRoleBinding
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+---
+# Monitoring multiple applications with ArgoCD
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: linkding
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/YOUR_REPO.git
+    targetRevision: main
+    path: apps/linkding
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: linkding
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
