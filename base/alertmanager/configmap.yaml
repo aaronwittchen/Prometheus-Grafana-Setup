@@ -36,20 +36,22 @@ data:
 
       - name: 'discord-critical'
         # Discord webhook for critical alerts
-        # To set up: Create a webhook in Discord Server Settings → Integrations → Webhooks
-        # Then replace DISCORD_WEBHOOK_URL with your webhook URL
-        webhook_configs:
-          - url: 'DISCORD_WEBHOOK_URL/slack'  # Discord webhooks are Slack-compatible
-            send_resolved: true
-            http_config:
-              follow_redirects: true
+        # To set up:
+        # 1. Create a webhook in Discord Server Settings → Integrations → Webhooks
+        # 2. Uncomment the webhook_configs below and replace YOUR_DISCORD_WEBHOOK_URL
+        # webhook_configs:
+        #   - url: 'YOUR_DISCORD_WEBHOOK_URL/slack'  # Discord webhooks are Slack-compatible
+        #     send_resolved: true
+        #     http_config:
+        #       follow_redirects: true
 
       - name: 'discord-warnings'
-        webhook_configs:
-          - url: 'DISCORD_WEBHOOK_URL/slack'
-            send_resolved: true
-            http_config:
-              follow_redirects: true
+        # Uncomment and configure when ready:
+        # webhook_configs:
+        #   - url: 'YOUR_DISCORD_WEBHOOK_URL/slack'
+        #     send_resolved: true
+        #     http_config:
+        #       follow_redirects: true
 
     inhibit_rules:
       # Inhibit warning if critical is firing
