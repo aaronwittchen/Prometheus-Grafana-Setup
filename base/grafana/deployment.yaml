@@ -36,8 +36,6 @@ spec:
                 secretKeyRef:
                   name: grafana-admin-secret
                   key: GF_SECURITY_ADMIN_PASSWORD
-            - name: GF_INSTALL_PLUGINS
-              value: "grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel"
             - name: GF_SERVER_ROOT_URL
               value: "http://grafana.192.168.2.207.nip.io"
             - name: GF_ANALYTICS_REPORTING_ENABLED
