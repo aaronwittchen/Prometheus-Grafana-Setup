@@ -7,7 +7,9 @@ resources:
   - namespace.yaml
 
   # Prometheus
-  - prometheus/rbac.yaml
+  - prometheus/serviceaccount.yaml
+  - prometheus/clusterrole.yaml
+  - prometheus/clusterrolebinding.yaml
   - prometheus/configmap.yaml
   - prometheus/pvc.yaml
   - prometheus/deployment.yaml
@@ -18,7 +20,9 @@ resources:
   - node-exporter/service.yaml
 
   # Kube State Metrics
-  - kube-state-metrics/rbac.yaml
+  - kube-state-metrics/serviceaccount.yaml
+  - kube-state-metrics/clusterrole.yaml
+  - kube-state-metrics/clusterrolebinding.yaml
   - kube-state-metrics/deployment.yaml
   - kube-state-metrics/service.yaml
 
@@ -41,15 +45,22 @@ resources:
   - loki/service.yaml
 
   # Promtail
-  - promtail/rbac.yaml
+  - promtail/serviceaccount.yaml
+  - promtail/clusterrole.yaml
+  - promtail/clusterrolebinding.yaml
   - promtail/configmap.yaml
   - promtail/daemonset.yaml
 
   # Ingress
-  - ingress/ingress.yaml
+  - ingress/grafana-ingress.yaml
+  - ingress/prometheus-ingress.yaml
+  - ingress/alertmanager-ingress.yaml
 
   # Network Policies (optional - comment out if not needed)
-  - network-policies/policies.yaml
+  - network-policies/prometheus-networkpolicy.yaml
+  - network-policies/grafana-networkpolicy.yaml
+  - network-policies/loki-networkpolicy.yaml
+  - network-policies/alertmanager-networkpolicy.yaml
 
 # Generate ConfigMap and Secret hashes
 configMapGenerator: []
