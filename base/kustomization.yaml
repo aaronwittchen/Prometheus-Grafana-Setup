@@ -27,7 +27,6 @@ resources:
   - kube-state-metrics/service.yaml
 
   # Grafana
-  - grafana/secret.yaml
   - grafana/configmap.yaml
   - grafana/pvc.yaml
   - grafana/deployment.yaml
@@ -61,6 +60,10 @@ resources:
   - network-policies/grafana-networkpolicy.yaml
   - network-policies/loki-networkpolicy.yaml
   - network-policies/alertmanager-networkpolicy.yaml
+
+# KSOPS Generator for SOPS-encrypted secrets
+generators:
+  - grafana/secret.yaml
 
 # Generate ConfigMap and Secret hashes
 configMapGenerator: []
