@@ -51,10 +51,6 @@ resources:
   # Network Policies (optional - comment out if not needed)
   - network-policies/policies.yaml
 
-commonLabels:
-  managed-by: kustomize
-  stack: monitoring
-
 # Generate ConfigMap and Secret hashes
 configMapGenerator: []
 secretGenerator: []
