@@ -2,7 +2,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: grafana
-  namespace: monitoring
   labels:
     app: grafana
 spec:
@@ -23,7 +22,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: prometheus
-  namespace: monitoring
   labels:
     app: prometheus
 spec:
@@ -44,7 +42,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: alertmanager
-  namespace: monitoring
   labels:
     app: alertmanager
 spec:

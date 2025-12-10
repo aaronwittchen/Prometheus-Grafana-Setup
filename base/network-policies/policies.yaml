@@ -3,7 +3,6 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: prometheus-network-policy
-  namespace: monitoring
 spec:
   podSelector:
     matchLabels:
@@ -83,7 +82,6 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: grafana-network-policy
-  namespace: monitoring
 spec:
   podSelector:
     matchLabels:
@@ -135,7 +133,6 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: loki-network-policy
-  namespace: monitoring
 spec:
   podSelector:
     matchLabels:
@@ -187,7 +184,6 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: alertmanager-network-policy
-  namespace: monitoring
 spec:
   podSelector:
     matchLabels:
