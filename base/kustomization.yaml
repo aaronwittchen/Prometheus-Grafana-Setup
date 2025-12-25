@@ -51,10 +51,10 @@ resources:
   - promtail/configmap.yaml
   - promtail/daemonset.yaml
 
-  # Ingress
-  - ingress/grafana-ingress.yaml
-  - ingress/prometheus-ingress.yaml
-  - ingress/alertmanager-ingress.yaml
+  # HTTPRoutes (Envoy Gateway)
+  - httproute/grafana-httproute.yaml
+  - httproute/prometheus-httproute.yaml
+  - httproute/alertmanager-httproute.yaml
 
   # Network Policies (optional - comment out if not needed)
   - network-policies/prometheus-networkpolicy.yaml

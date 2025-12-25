@@ -11,11 +11,11 @@ spec:
     - Ingress
     - Egress
   ingress:
-    # Allow ingress controller
+    # Allow Envoy Gateway
     - from:
         - namespaceSelector:
             matchLabels:
-              name: ingress-nginx
+              kubernetes.io/metadata.name: envoy-gateway-system
       ports:
         - protocol: TCP
           port: 3000
